@@ -8,7 +8,9 @@ from flask_cors import CORS
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)  # Enable CORS to allow requests from the React frontend
+#CORS(app)  # Enable CORS to allow requests from the React frontend
+CORS(app, origins=["https://med-cnn-frontend.vercel.app/"])  # Replace with your actual frontend URL
+
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
