@@ -4,16 +4,12 @@ from flask import Flask, request, jsonify
 from torchvision import models, transforms
 from torch import nn
 from PIL import Image
-from flask_cors import CORS
+from flask_cors import CORS  # Import Flask-CORS
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Enable CORS for all routes
-CORS(app)  # This allows all domains by default
-
-# If you want to allow only specific origins, use:
-# CORS(app, resources={r"/*": {"origins": "https://med-cnn-frontend.vercel.app"}})
+# Allow requests only from your specific frontend domain
+CORS(app, resources={r"/*": {"origins": "https://med-cnn-frontend.vercel.app"}})
 
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
