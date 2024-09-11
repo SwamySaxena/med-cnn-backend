@@ -8,19 +8,27 @@ from flask_cors import CORS
 
 # Initialize Flask app
 app = Flask(__name__)
-#CORS(app)  # Enable CORS to allow requests from the React frontend
-CORS(app, origins=["https://med-cnn-frontend.vercel.app/"])  # Replace with your actual frontend URL
+
+# Enable CORS for all routes
+CORS(app)  # This allows all domains by default
+
+# If you want to allow only specific origins, use:
+# CORS(app, resources={r"/*": {"origins": "https://med-cnn-frontend.vercel.app"}})
 
 UPLOAD_FOLDER = 'uploads/'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Load the trained model
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = models.efficientnet_b0(pretrained=False)
-model.classifier[1] = nn.Linear(model.classifier[1].in_features, 5)  # Adjust for 5 output classes
-model.load_state_dict(torch.load('best_model.pth', map_location=device))
-model.to(device)
-model.eval()
+try:
+    model = models.efficientnet_b0(pretrained=False)
+    model.classifier[1] = nn.Linear(model.classifier[1].in_features, 5)  # Adjust for 5 output classes
+    model.load_state_dict(torch.load('best_model.pth', map_location=device))
+    model.to(device)
+    model.eval()
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
 
 # Define image preprocessing
 transform = transforms.Compose([
@@ -39,25 +47,33 @@ def predict():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
-    # Save the uploaded file
-    file_path = os.path.join(UPLOAD_FOLDER, file.filename)
-    file.save(file_path)
+    try:
+        # Save the uploaded file
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
+        file.save(file_path)
+        print(f"File saved at {file_path}")
 
-    # Preprocess the image
-    image = Image.open(file_path).convert('RGB')
-    image = transform(image).unsqueeze(0).to(device)
+        # Preprocess the image
+        image = Image.open(file_path).convert('RGB')
+        image = transform(image).unsqueeze(0).to(device)
 
-    # Run the model prediction
-    with torch.no_grad():
-        outputs = model(image)
-        _, predicted = torch.max(outputs, 1)
-        severity = int(predicted.item())
+        # Run the model prediction
+        with torch.no_grad():
+            outputs = model(image)
+            _, predicted = torch.max(outputs, 1)
+            severity = int(predicted.item())
+            print(f"Prediction completed with severity: {severity}")
 
-    # Delete the file after prediction
-    os.remove(file_path)
+        # Delete the file after prediction
+        os.remove(file_path)
+        print(f"File {file_path} deleted after prediction.")
 
-    # Return the result as JSON
-    return jsonify({'severity': severity})
+        # Return the result as JSON
+        return jsonify({'severity': severity})
+    
+    except Exception as e:
+        print(f"Error processing the image: {e}")
+        return jsonify({'error': 'Prediction failed due to an internal error.'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
